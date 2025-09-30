@@ -3,7 +3,6 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import OpenAI from 'openai';
-import pdfParse from 'pdf-parse';
 import db from './db.js';
 
 const app = express();
@@ -12,6 +11,8 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 app.use(cors({ origin: process.env.ORIGIN?.split(',') || '*' }));
 app.use(express.json({ limit: '8mb' }));
+app.get('/', (req, res) => res.json({ ok: true }));
+app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 const isPg = (db.kind === 'pg');
 
@@ -137,6 +138,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     const ext = (req.file.originalname.split('.').pop() || '').toLowerCase();
     let text = '';
     if (ext === 'pdf') {
+      const pdfParse = (await import('pdf-parse')).default; // <-- lazy import here
       const data = await pdfParse(req.file.buffer);
       text = data.text;
     } else {
@@ -147,6 +149,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     res.json({ summary });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
 
 app.post('/api/quiz/from-note', async (req, res) => {
   try {
